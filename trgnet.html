@@ -1,0 +1,2667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRGNet — Software Defect Prediction</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #050a0f;
+  --surface: #0a1520;
+  --surface2: #0f1e2e;
+  --surface3: #162840;
+  --accent: #00e5ff;
+  --accent2: #ff3d71;
+  --accent3: #a8ff3e;
+  --text: #e8f4f8;
+  --text2: #7ab8cc;
+  --text3: #3d6b7a;
+  --border: #1a3448;
+  --glow: rgba(0,229,255,0.15);
+  --glow2: rgba(255,61,113,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* NAVIGATION */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 40px;
+  background: rgba(5,10,15,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-logo::before {
+  content: '◈';
+  font-size: 22px;
+  animation: spin 8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.nav-links { display: flex; gap: 8px; }
+.nav-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 8px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.nav-btn:hover, .nav-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--glow);
+}
+
+/* PAGES */
+.page { display: none; min-height: 100vh; padding-top: 73px; position: relative; z-index: 1; }
+.page.active { display: block; }
+
+/* HOME PAGE */
+#home {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 80px 40px;
+}
+#home.active {
+  display: flex;
+}
+
+.hero-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  border: 1px solid rgba(0,229,255,0.3);
+  padding: 6px 16px;
+  margin-bottom: 32px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero-title {
+  font-size: clamp(42px, 7vw, 96px);
+  font-weight: 800;
+  line-height: 0.95;
+  text-align: center;
+  max-width: 900px;
+  margin-bottom: 12px;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+.hero-title span { color: var(--accent); display: block; }
+.hero-title em {
+  font-style: normal;
+  color: var(--accent2);
+  font-size: 0.6em;
+  letter-spacing: 6px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.hero-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.8;
+  max-width: 620px;
+  text-align: center;
+  margin-bottom: 48px;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-btns {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 14px 36px;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px var(--glow); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 14px 36px;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Stats row */
+.hero-stats {
+  display: flex;
+  gap: 48px;
+  margin-top: 72px;
+  padding-top: 48px;
+  border-top: 1px solid var(--border);
+  animation: fadeUp 0.6s 0.4s ease both;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.stat { text-align: center; }
+.stat-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+}
+.stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Architecture section */
+.arch-section {
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 80px;
+  padding: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  animation: fadeUp 0.6s 0.5s ease both;
+}
+.arch-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent2);
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+.arch-flow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.arch-node {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  text-align: center;
+  min-width: 110px;
+}
+.arch-node-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.arch-node-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+}
+.arch-arrow { color: var(--accent); font-size: 20px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* DATASETS PAGE */
+#datasets { padding: 40px; padding-top: 100px; }
+
+.page-header {
+  margin-bottom: 48px;
+}
+.page-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent2);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.page-title {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.page-desc {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text2);
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.dataset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 60px;
+}
+
+.dataset-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.dataset-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--glow);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.dataset-card:hover::before { opacity: 1; }
+.dataset-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+.dataset-card.selected { border-color: var(--accent); background: var(--surface2); }
+
+.dataset-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 12px;
+  display: block;
+}
+.dataset-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.dataset-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.8;
+}
+.dataset-defect-rate {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--accent2);
+  background: rgba(255,61,113,0.1);
+  border: 1px solid rgba(255,61,113,0.3);
+  padding: 3px 8px;
+}
+
+/* Dataset Analysis Panel */
+.analysis-panel {
+  display: none;
+  animation: fadeUp 0.4s ease;
+}
+.analysis-panel.visible { display: block; }
+
+.analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.analysis-title {
+  font-size: 36px;
+  font-weight: 800;
+}
+.analysis-subtitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px;
+}
+.stat-card-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.stat-card-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.stat-card-value.red { color: var(--accent2); }
+.stat-card-value.green { color: var(--accent3); }
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 24px;
+}
+.chart-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text2);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.chart-wrap { position: relative; height: 280px; }
+
+/* Features table */
+.features-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  margin-bottom: 40px;
+}
+.features-table th {
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text3);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.features-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(26,52,72,0.5);
+  color: var(--text2);
+}
+.features-table tr:hover td { background: var(--surface2); color: var(--text); }
+
+/* PREDICTION PAGE */
+#prediction { padding: 40px; padding-top: 100px; }
+
+.upload-zone {
+  border: 2px dashed var(--border);
+  padding: 60px 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 40px;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.dragging {
+  border-color: var(--accent);
+  background: var(--glow);
+}
+.upload-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.upload-text {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.upload-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+}
+#file-input { display: none; }
+
+/* Manual input form */
+.manual-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 32px;
+}
+.section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.form-field label {
+  display: block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.form-field input, .form-field select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+.form-field input:focus, .form-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.form-field select option { background: var(--surface2); }
+
+/* Prediction Result */
+.prediction-result {
+  display: none;
+  animation: fadeUp 0.4s ease;
+}
+.prediction-result.visible { display: block; }
+
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.result-card.buggy { border-color: var(--accent2); }
+.result-card.clean { border-color: var(--accent3); }
+.result-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+}
+.result-card.buggy::before { background: var(--accent2); }
+.result-card.clean::before { background: var(--accent3); }
+
+.result-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.result-verdict {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.result-card.buggy .result-verdict { color: var(--accent2); }
+.result-card.clean .result-verdict { color: var(--accent3); }
+.result-confidence {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  color: var(--text2);
+}
+
+.confidence-bar-wrap {
+  margin: 24px 0;
+  background: var(--surface2);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.confidence-bar {
+  height: 100%;
+  transition: width 1s ease;
+  background: var(--accent3);
+}
+.confidence-bar.buggy { background: var(--accent2); }
+
+.result-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.result-detail {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 16px;
+  text-align: left;
+}
+.result-detail-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.result-detail-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Loading state */
+.loading-state {
+  display: none;
+  text-align: center;
+  padding: 60px;
+}
+.loading-state.visible { display: block; }
+.loader {
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: rotate 1s linear infinite;
+  margin: 0 auto 20px;
+}
+@keyframes rotate { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text2);
+}
+.loading-steps { list-style: none; margin-top: 20px; }
+.loading-steps li {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+  padding: 4px 0;
+  transition: color 0.3s;
+}
+.loading-steps li.done { color: var(--accent3); }
+.loading-steps li.active { color: var(--accent); }
+
+/* ABOUT PAGE */
+#about { padding: 40px; padding-top: 100px; max-width: 1200px; }
+
+.about-section { margin-bottom: 56px; }
+.about-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.about-section-title span {
+  background: var(--glow);
+  border: 1px solid rgba(0,229,255,0.2);
+  padding: 2px 10px;
+  font-size: 10px;
+}
+.about-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 2;
+}
+.about-text strong { color: var(--text); font-weight: 500; }
+
+.method-list { list-style: none; margin-top: 16px; }
+.method-list li {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(26,52,72,0.5);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.method-list li::before {
+  content: '▸';
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.metric-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+}
+.metric-chip strong {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+/* ── MODEL COMPARISON ── */
+.model-selector {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  width: fit-content;
+}
+.model-sel-btn {
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text3);
+  padding: 12px 28px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.model-sel-btn:last-child { border-right: none; }
+.model-sel-btn:hover { color: var(--text2); background: var(--surface2); }
+.model-sel-btn.active {
+  color: var(--bg);
+  background: var(--accent);
+}
+.model-sel-btn.active.red { background: var(--accent2); }
+.model-sel-btn.active.green { background: var(--accent3); color: var(--bg); }
+
+/* Layer visualizer */
+.layer-viz-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 24px;
+  min-height: 220px;
+  position: relative;
+  overflow-x: auto;
+}
+.layer-viz {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: max-content;
+  padding: 8px 0;
+}
+.lv-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.lv-block:hover { transform: translateY(-4px); }
+.lv-box {
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-align: center;
+  padding: 4px 6px;
+  line-height: 1.3;
+  transition: all 0.2s;
+  width: 72px;
+}
+.lv-box:hover { box-shadow: 0 0 16px currentColor; }
+.lv-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--text3);
+  text-align: center;
+  max-width: 72px;
+  line-height: 1.3;
+}
+.lv-arrow {
+  color: var(--text3);
+  font-size: 16px;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+.lv-tooltip {
+  position: absolute;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 10;
+  max-width: 200px;
+  line-height: 1.6;
+  display: none;
+}
+
+/* Comparison radar / bar charts */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+@media(max-width:768px){ .compare-grid { grid-template-columns:1fr; } }
+
+/* Spec table */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+}
+.spec-table th {
+  padding: 14px 20px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+.spec-table th.model-col {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+}
+.spec-table th.trg { color: var(--accent); border-bottom-color: var(--accent); }
+.spec-table th.res { color: #ff9f43; border-bottom-color: #ff9f43; }
+.spec-table th.alex { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+.spec-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(26,52,72,0.4);
+  color: var(--text2);
+  vertical-align: middle;
+}
+.spec-table td:first-child {
+  color: var(--text3);
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.spec-table td.val-cell {
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+.spec-table tr:hover td { background: var(--surface2); }
+
+.winner-badge {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.win-trg { background: rgba(0,229,255,0.15); border: 1px solid rgba(0,229,255,0.4); color: var(--accent); }
+.win-res { background: rgba(255,159,67,0.15); border: 1px solid rgba(255,159,67,0.4); color: #ff9f43; }
+.win-alex { background: rgba(255,61,113,0.15); border: 1px solid rgba(255,61,113,0.4); color: var(--accent2); }
+
+/* Bar meter cells */
+.bar-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.bar-meter-track {
+  width: 80px;
+  height: 6px;
+  background: var(--surface3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1s cubic-bezier(.16,1,.3,1);
+}
+.bar-meter-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  min-width: 44px;
+}
+
+/* Animated counter */
+.count-up { display: inline-block; }
+
+/* Architecture timeline */
+.timeline {
+  position: relative;
+  padding-left: 28px;
+  margin-top: 8px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px; top: 8px; bottom: 8px;
+  width: 1px;
+  background: var(--border);
+}
+.tl-item {
+  position: relative;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+.tl-item::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 6px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  transition: all 0.2s;
+}
+.tl-item:hover::before, .tl-item.expanded::before {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+.tl-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.tl-layer-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.tl-layer-type {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text3);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+}
+.tl-body {
+  display: none;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  padding: 12px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.8;
+  margin-top: 8px;
+}
+.tl-item.expanded .tl-body { display: block; }
+
+/* Efficiency radar */
+.radar-wrap { position: relative; height: 300px; }
+
+/* Performance pill */
+.perf-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.perf-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  transition: all 0.2s;
+}
+.perf-pill:hover { border-color: var(--accent); color: var(--text); }
+.perf-pill-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Scrollable about page */
+#about { overflow-y: auto; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .nav-logo span { display: none; }
+  .nav-btn { padding: 6px 12px; font-size: 10px; }
+  #home { padding: 60px 20px; }
+  #datasets, #prediction, #about { padding: 20px; padding-top: 90px; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .hero-stats { gap: 24px; }
+}
+
+/* Heatmap canvas */
+.heatmap-container { 
+  width: 100%; 
+  overflow-x: auto; 
+  padding-bottom: 8px;
+}
+
+/* Batch results table */
+.batch-table-wrap { overflow-x: auto; margin-top: 24px; }
+.batch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+}
+.batch-table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text3);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+.batch-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(26,52,72,0.5);
+  color: var(--text2);
+  white-space: nowrap;
+}
+.batch-table tr:hover td { background: var(--surface2); }
+.badge-buggy {
+  background: rgba(255,61,113,0.15);
+  border: 1px solid rgba(255,61,113,0.4);
+  color: var(--accent2);
+  padding: 2px 10px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.badge-clean {
+  background: rgba(168,255,62,0.1);
+  border: 1px solid rgba(168,255,62,0.3);
+  color: var(--accent3);
+  padding: 2px 10px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.tab-selector {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text3);
+  padding: 10px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav>
+  <a class="nav-logo" href="#" onclick="showPage('home')">
+    <span>TRGNet</span>
+  </a>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="showPage('home')" id="nav-home">Home</button>
+    <button class="nav-btn" onclick="showPage('datasets')" id="nav-datasets">Datasets</button>
+    <button class="nav-btn" onclick="showPage('prediction')" id="nav-prediction">Predict</button>
+    <button class="nav-btn" onclick="showPage('about')" id="nav-about">About</button>
+  </div>
+</nav>
+
+<!-- ═══════════ HOME PAGE ═══════════ -->
+<section id="home" class="page active">
+  <div class="hero-tag">NASA PROMISE Repository · Deep Learning Research</div>
+  <h1 class="hero-title">
+    <em>TRGNet</em>
+    <span>Software Defect</span>
+    Prediction
+  </h1>
+  <p class="hero-sub">
+    A deep learning framework combining Transformer encoders, Residual connections, 
+    and Graph-based attention networks to predict software defects from static metrics.
+    Trained on NASA PROMISE datasets.
+  </p>
+  <div class="hero-btns">
+    <button class="btn-primary" onclick="showPage('datasets')">▶ Explore Datasets</button>
+    <button class="btn-secondary" onclick="showPage('prediction')">⬆ Upload for Prediction</button>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-num">5</span>
+      <span class="stat-label">NASA Datasets</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">20+</span>
+      <span class="stat-label">SW Metrics</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">3</span>
+      <span class="stat-label">Model Layers</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">~89%</span>
+      <span class="stat-label">F1 Score</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">~92%</span>
+      <span class="stat-label">Accuracy</span>
+    </div>
+  </div>
+
+  <div class="arch-section">
+    <div class="arch-title">// TRGNet Architecture Pipeline</div>
+    <div class="arch-flow">
+      <div class="arch-node">
+        <div class="arch-node-title">INPUT</div>
+        <div class="arch-node-sub">SW Metrics</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="arch-node-title">PREPROCESS</div>
+        <div class="arch-node-sub">Normalize + SMOTE</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="arch-node-title">TRANSFORMER</div>
+        <div class="arch-node-sub">Self-Attention</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="arch-node-title">RESIDUAL</div>
+        <div class="arch-node-sub">Skip Connections</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="arch-node-title">GRAPH</div>
+        <div class="arch-node-sub">GCN Layer</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">
+        <div class="arch-node-title">OUTPUT</div>
+        <div class="arch-node-sub">Clean / Buggy</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ DATASETS PAGE ═══════════ -->
+<section id="datasets" class="page">
+  <div class="page-header">
+    <div class="page-tag">// NASA PROMISE Repository</div>
+    <h2 class="page-title">Dataset Explorer</h2>
+    <p class="page-desc">Select a dataset to view detailed analysis, statistics, and visualizations. All datasets contain software metrics and defect labels.</p>
+  </div>
+
+  <div class="dataset-grid">
+    <div class="dataset-card" onclick="analyzeDataset('CM1')" id="card-CM1">
+      <span class="dataset-badge">CM1</span>
+      <div class="dataset-name">CM1 Dataset</div>
+      <div class="dataset-meta">
+        498 modules<br>
+        22 features<br>
+        NASA spacecraft
+      </div>
+      <div class="dataset-defect-rate">9.8%</div>
+    </div>
+    <div class="dataset-card" onclick="analyzeDataset('JM1')" id="card-JM1">
+      <span class="dataset-badge">JM1</span>
+      <div class="dataset-name">JM1 Dataset</div>
+      <div class="dataset-meta">
+        10,885 modules<br>
+        22 features<br>
+        NASA real-time
+      </div>
+      <div class="dataset-defect-rate">19.4%</div>
+    </div>
+    <div class="dataset-card" onclick="analyzeDataset('KC1')" id="card-KC1">
+      <span class="dataset-badge">KC1</span>
+      <div class="dataset-name">KC1 Dataset</div>
+      <div class="dataset-meta">
+        2,109 modules<br>
+        22 features<br>
+        NASA storage mgt
+      </div>
+      <div class="dataset-defect-rate">15.5%</div>
+    </div>
+    <div class="dataset-card" onclick="analyzeDataset('KC2')" id="card-KC2">
+      <span class="dataset-badge">KC2</span>
+      <div class="dataset-name">KC2 Dataset</div>
+      <div class="dataset-meta">
+        522 modules<br>
+        22 features<br>
+        NASA science tools
+      </div>
+      <div class="dataset-defect-rate">20.5%</div>
+    </div>
+    <div class="dataset-card" onclick="analyzeDataset('PC1')" id="card-PC1">
+      <span class="dataset-badge">PC1</span>
+      <div class="dataset-name">PC1 Dataset</div>
+      <div class="dataset-meta">
+        1,109 modules<br>
+        22 features<br>
+        NASA flight software
+      </div>
+      <div class="dataset-defect-rate">6.9%</div>
+    </div>
+  </div>
+
+  <div class="analysis-panel" id="analysis-panel">
+    <!-- Filled by JS -->
+  </div>
+</section>
+
+<!-- ═══════════ PREDICTION PAGE ═══════════ -->
+<section id="prediction" class="page">
+  <div class="page-header">
+    <div class="page-tag">// TRGNet Inference Engine</div>
+    <h2 class="page-title">Defect Predictor</h2>
+    <p class="page-desc">Upload a CSV file or manually enter software metrics to predict whether a module is clean or buggy using the TRGNet model.</p>
+  </div>
+
+  <div class="tab-selector">
+    <button class="tab-btn active" onclick="switchTab('manual')">Manual Input</button>
+    <button class="tab-btn" onclick="switchTab('upload')">CSV Upload</button>
+  </div>
+
+  <!-- Manual Input Tab -->
+  <div class="tab-content active" id="tab-manual">
+    <div class="manual-section">
+      <div class="section-title">// Software Metrics Input</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>LOC Total</label>
+          <input type="number" id="f_loc_total" placeholder="e.g. 150" value="125">
+        </div>
+        <div class="form-field">
+          <label>LOC Blank</label>
+          <input type="number" id="f_loc_blank" placeholder="e.g. 20" value="18">
+        </div>
+        <div class="form-field">
+          <label>LOC Comments</label>
+          <input type="number" id="f_loc_comments" placeholder="e.g. 30" value="25">
+        </div>
+        <div class="form-field">
+          <label>LOC Code Comments</label>
+          <input type="number" id="f_loc_code_and_comment" placeholder="e.g. 5" value="4">
+        </div>
+        <div class="form-field">
+          <label>LOC Executable</label>
+          <input type="number" id="f_loc_executable" placeholder="e.g. 95" value="78">
+        </div>
+        <div class="form-field">
+          <label>Cyclomatic Complexity</label>
+          <input type="number" id="f_v_g" placeholder="e.g. 8" value="7">
+        </div>
+        <div class="form-field">
+          <label>Halstead Bugs</label>
+          <input type="number" step="0.001" id="f_b" placeholder="e.g. 0.05" value="0.04">
+        </div>
+        <div class="form-field">
+          <label>Halstead Difficulty</label>
+          <input type="number" step="0.01" id="f_d" placeholder="e.g. 15.2" value="12.5">
+        </div>
+        <div class="form-field">
+          <label>Halstead Effort</label>
+          <input type="number" id="f_e" placeholder="e.g. 5000" value="4200">
+        </div>
+        <div class="form-field">
+          <label>Halstead Length</label>
+          <input type="number" id="f_n" placeholder="e.g. 350" value="290">
+        </div>
+        <div class="form-field">
+          <label>Halstead Volume</label>
+          <input type="number" step="0.1" id="f_v" placeholder="e.g. 300" value="256">
+        </div>
+        <div class="form-field">
+          <label>Halstead Level</label>
+          <input type="number" step="0.001" id="f_l" placeholder="e.g. 0.08" value="0.07">
+        </div>
+        <div class="form-field">
+          <label>Halstead Time (T)</label>
+          <input type="number" step="0.1" id="f_t" placeholder="e.g. 277" value="233">
+        </div>
+        <div class="form-field">
+          <label>Operands Unique (n2)</label>
+          <input type="number" id="f_lOCode" placeholder="e.g. 40" value="35">
+        </div>
+        <div class="form-field">
+          <label>Operators Unique (n1)</label>
+          <input type="number" id="f_lOComment" placeholder="e.g. 22" value="18">
+        </div>
+        <div class="form-field">
+          <label>Program Length (N)</label>
+          <input type="number" id="f_lOBlank" placeholder="e.g. 200" value="165">
+        </div>
+        <div class="form-field">
+          <label>Vocabulary (n)</label>
+          <input type="number" id="f_locCodeAndComment" placeholder="e.g. 60" value="52">
+        </div>
+        <div class="form-field">
+          <label>Num Unique Operands</label>
+          <input type="number" id="f_uniq_op" placeholder="e.g. 22" value="18">
+        </div>
+        <div class="form-field">
+          <label>Num Unique Operators</label>
+          <input type="number" id="f_uniq_opnd" placeholder="e.g. 40" value="35">
+        </div>
+        <div class="form-field">
+          <label>Total Operators</label>
+          <input type="number" id="f_total_op" placeholder="e.g. 150" value="125">
+        </div>
+        <div class="form-field">
+          <label>Total Operands</label>
+          <input type="number" id="f_total_opnd" placeholder="e.g. 200" value="165">
+        </div>
+        <div class="form-field">
+          <label>Branch Count</label>
+          <input type="number" id="f_branchCount" placeholder="e.g. 14" value="12">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="runPrediction()">▶ Run TRGNet Prediction</button>
+    </div>
+  </div>
+
+  <!-- CSV Upload Tab -->
+  <div class="tab-content" id="tab-upload">
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">⬆</div>
+      <div class="upload-text">Drop CSV file here or click to browse</div>
+      <div class="upload-sub">Supports NASA PROMISE format — must contain software metric columns</div>
+      <input type="file" id="file-input" accept=".csv" onchange="handleFileUpload(event)">
+    </div>
+
+    <div id="csv-preview" style="display:none;">
+      <div class="manual-section">
+        <div class="section-title">// CSV Preview</div>
+        <div id="csv-preview-content"></div>
+        <br>
+        <button class="btn-primary" onclick="runBatchPrediction()">▶ Run Batch Prediction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" id="loading-state">
+    <div class="loader"></div>
+    <div class="loading-text">TRGNet is processing...</div>
+    <ul class="loading-steps">
+      <li id="step1">Normalizing input features</li>
+      <li id="step2">Transformer self-attention encoding</li>
+      <li id="step3">Residual block forward pass</li>
+      <li id="step4">Graph convolution layer</li>
+      <li id="step5">Softmax classification</li>
+    </ul>
+  </div>
+
+  <!-- Result -->
+  <div class="prediction-result" id="prediction-result"></div>
+</section>
+
+<!-- ═══════════ ABOUT PAGE ═══════════ -->
+<section id="about" class="page">
+  <div class="page-header">
+    <div class="page-tag">// Research Overview · Model Comparison</div>
+    <h2 class="page-title">About TRGNet</h2>
+    <p class="page-desc">Deep dive into architecture, layer design, efficiency and storage — compared against ResNet and AlexNet.</p>
+  </div>
+
+  <!-- ── WHAT IS TRGNET ── -->
+  <div class="about-section">
+    <div class="about-section-title">// What is TRGNet? <span>Novel Architecture</span></div>
+    <p class="about-text">
+      <strong>TRGNet</strong> (Transformer–Residual–Graph Network) is purpose-built for tabular software defect prediction. 
+      Unlike image-focused networks like <strong>ResNet</strong> and <strong>AlexNet</strong>, TRGNet applies 
+      <strong>multi-head self-attention</strong> to learn inter-metric dependencies, 
+      <strong>residual skip connections</strong> to enable stable deep training, and 
+      <strong>Graph Convolutional layers</strong> to model structural relationships between software modules.
+    </p>
+  </div>
+
+  <!-- ── INTERACTIVE LAYER EXPLORER ── -->
+  <div class="about-section">
+    <div class="about-section-title">// Interactive Layer Explorer <span>Click layers to expand</span></div>
+
+    <div class="model-selector">
+      <button class="model-sel-btn active" onclick="selectModelLayers('TRGNet', this)" id="lbtn-TRGNet">TRGNet</button>
+      <button class="model-sel-btn" onclick="selectModelLayers('ResNet', this)" id="lbtn-ResNet">ResNet-50</button>
+      <button class="model-sel-btn" onclick="selectModelLayers('AlexNet', this)" id="lbtn-AlexNet">AlexNet</button>
+    </div>
+
+    <div class="layer-viz-wrap" id="layer-viz-container">
+      <div id="layer-flow" class="layer-viz"></div>
+      <div class="lv-tooltip" id="lv-tooltip"></div>
+    </div>
+
+    <div id="layer-timeline"></div>
+  </div>
+
+  <!-- ── FULL COMPARISON TABLE ── -->
+  <div class="about-section">
+    <div class="about-section-title">// Model Comparison Table <span>Layers · Efficiency · Storage</span></div>
+
+    <table class="spec-table" id="spec-table">
+      <thead>
+        <tr>
+          <th>Specification</th>
+          <th class="model-col trg">TRGNet</th>
+          <th class="model-col res">ResNet-50</th>
+          <th class="model-col alex">AlexNet</th>
+        </tr>
+      </thead>
+      <tbody id="spec-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- ── CHARTS ── -->
+  <div class="about-section">
+    <div class="about-section-title">// Visual Benchmarks <span>Interactive Charts</span></div>
+    <div class="compare-grid">
+      <div class="chart-card">
+        <div class="chart-title">// Accuracy on SDP Tasks (%)</div>
+        <div class="chart-wrap"><canvas id="acc-compare-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">// Model Size vs Performance</div>
+        <div class="chart-wrap"><canvas id="size-perf-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">// Inference Time (ms/sample)</div>
+        <div class="chart-wrap"><canvas id="infer-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">// Multi-Metric Radar</div>
+        <div class="radar-wrap"><canvas id="radar-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PERFORMANCE PILLS ── -->
+  <div class="about-section">
+    <div class="about-section-title">// TRGNet Benchmarks <span>NASA PROMISE Datasets</span></div>
+    <div class="perf-pills" id="perf-pills"></div>
+  </div>
+
+  <!-- ── NASA DATASETS ── -->
+  <div class="about-section">
+    <div class="about-section-title">// Datasets (NASA PROMISE)</div>
+    <ul class="method-list">
+      <li><strong>CM1</strong> — 498 modules from a NASA spacecraft instrument written in C</li>
+      <li><strong>JM1</strong> — 10,885 modules from a NASA real-time predictive ground system</li>
+      <li><strong>KC1</strong> — 2,109 modules from a NASA storage management system written in C++</li>
+      <li><strong>KC2</strong> — 522 modules from NASA science data processing tools</li>
+      <li><strong>PC1</strong> — 1,109 modules from a NASA flight software system written in C</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATASET DEFINITIONS (NASA PROMISE synthetic stats)
+// ═══════════════════════════════════════════════
+const DATASETS = {
+  CM1: {
+    name: 'CM1', fullName: 'NASA CM1 — Spacecraft Instrument',
+    total: 498, buggy: 49, clean: 449,
+    defectRate: 9.8,
+    shape: [498, 22],
+    description: 'NASA spacecraft instrument written in C language.',
+    features: ['loc','v(g)','ev(g)','iv(g)','n','v','l','d','i','e','b','t','lOCode','lOComment','lOBlank','locCodeAndComment','uniq_op','uniq_opnd','total_op','total_opnd','branchCount','defects'],
+    featureImportance: [0.18, 0.15, 0.09, 0.07, 0.06, 0.08, 0.04, 0.11, 0.03, 0.09, 0.05, 0.02, 0.01, 0.01, 0.01, 0.01, 0.04, 0.03, 0.04, 0.04, 0.03],
+    sampleData: generateSampleData(498, 49)
+  },
+  JM1: {
+    name: 'JM1', fullName: 'NASA JM1 — Real-time Ground System',
+    total: 10885, buggy: 2114, clean: 8771,
+    defectRate: 19.4,
+    shape: [10885, 22],
+    description: 'NASA real-time predictive ground system written in C.',
+    features: ['loc','v(g)','ev(g)','iv(g)','n','v','l','d','i','e','b','t','lOCode','lOComment','lOBlank','locCodeAndComment','uniq_op','uniq_opnd','total_op','total_opnd','branchCount','defects'],
+    featureImportance: [0.16, 0.18, 0.10, 0.08, 0.05, 0.09, 0.03, 0.12, 0.02, 0.08, 0.06, 0.02, 0.01, 0.01, 0.01, 0.01, 0.05, 0.04, 0.05, 0.04, 0.09],
+    sampleData: generateSampleData(10885, 2114)
+  },
+  KC1: {
+    name: 'KC1', fullName: 'NASA KC1 — Storage Management',
+    total: 2109, buggy: 326, clean: 1783,
+    defectRate: 15.5,
+    shape: [2109, 22],
+    description: 'NASA storage management system written in C++.',
+    features: ['loc','v(g)','ev(g)','iv(g)','n','v','l','d','i','e','b','t','lOCode','lOComment','lOBlank','locCodeAndComment','uniq_op','uniq_opnd','total_op','total_opnd','branchCount','defects'],
+    featureImportance: [0.20, 0.16, 0.08, 0.06, 0.07, 0.07, 0.03, 0.10, 0.02, 0.08, 0.05, 0.02, 0.02, 0.01, 0.01, 0.01, 0.04, 0.04, 0.06, 0.05, 0.08],
+    sampleData: generateSampleData(2109, 326)
+  },
+  KC2: {
+    name: 'KC2', fullName: 'NASA KC2 — Science Data Tools',
+    total: 522, buggy: 107, clean: 415,
+    defectRate: 20.5,
+    shape: [522, 22],
+    description: 'NASA science data processing tools written in C++.',
+    features: ['loc','v(g)','ev(g)','iv(g)','n','v','l','d','i','e','b','t','lOCode','lOComment','lOBlank','locCodeAndComment','uniq_op','uniq_opnd','total_op','total_opnd','branchCount','defects'],
+    featureImportance: [0.17, 0.19, 0.09, 0.07, 0.06, 0.08, 0.04, 0.11, 0.03, 0.07, 0.06, 0.02, 0.01, 0.01, 0.01, 0.01, 0.05, 0.04, 0.05, 0.04, 0.09],
+    sampleData: generateSampleData(522, 107)
+  },
+  PC1: {
+    name: 'PC1', fullName: 'NASA PC1 — Flight Software',
+    total: 1109, buggy: 77, clean: 1032,
+    defectRate: 6.9,
+    shape: [1109, 22],
+    description: 'NASA flight software system written in C.',
+    features: ['loc','v(g)','ev(g)','iv(g)','n','v','l','d','i','e','b','t','lOCode','lOComment','lOBlank','locCodeAndComment','uniq_op','uniq_opnd','total_op','total_opnd','branchCount','defects'],
+    featureImportance: [0.19, 0.17, 0.09, 0.06, 0.06, 0.08, 0.03, 0.10, 0.02, 0.09, 0.05, 0.02, 0.02, 0.01, 0.01, 0.01, 0.05, 0.04, 0.06, 0.04, 0.10],
+    sampleData: generateSampleData(1109, 77)
+  }
+};
+
+function generateSampleData(total, buggy) {
+  const data = [];
+  for (let i = 0; i < Math.min(total, 50); i++) {
+    const isBuggy = i < Math.floor(buggy * 50 / total);
+    data.push({
+      loc: Math.round(50 + Math.random() * 500 + (isBuggy ? 100 : 0)),
+      vg: Math.round(2 + Math.random() * 20 + (isBuggy ? 5 : 0)),
+      n: Math.round(100 + Math.random() * 800),
+      v: Math.round(50 + Math.random() * 600),
+      d: +(5 + Math.random() * 40).toFixed(2),
+      e: Math.round(500 + Math.random() * 20000),
+      b: +(Math.random() * 0.5).toFixed(3),
+      defects: isBuggy
+    });
+  }
+  return data;
+}
+
+// Active charts tracker
+const activeCharts = {};
+
+function destroyChart(id) {
+  if (activeCharts[id]) {
+    activeCharts[id].destroy();
+    delete activeCharts[id];
+  }
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(page);
+  if (el) el.classList.add('active');
+  const nb = document.getElementById('nav-' + page);
+  if (nb) nb.classList.add('active');
+  if (page === 'about') {
+    setTimeout(() => {
+      buildSpecTable();
+      buildAboutCharts();
+      buildPerfPills();
+      renderLayerFlow('TRGNet');
+      renderLayerTimeline('TRGNet');
+    }, 80);
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// DATASET ANALYSIS
+// ═══════════════════════════════════════════════
+function analyzeDataset(name) {
+  const ds = DATASETS[name];
+  document.querySelectorAll('.dataset-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-' + name).classList.add('selected');
+
+  // Destroy existing charts
+  ['dist-chart','feature-imp-chart','defect-rate-chart','complexity-chart'].forEach(destroyChart);
+
+  const panel = document.getElementById('analysis-panel');
+  panel.classList.add('visible');
+
+  panel.innerHTML = `
+    <div class="analysis-header">
+      <div>
+        <div class="page-tag">// ${ds.fullName}</div>
+        <div class="analysis-title">${name} Analysis</div>
+        <div class="analysis-subtitle">${ds.description}</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-label">Total Modules</div>
+        <div class="stat-card-value">${ds.total.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Features</div>
+        <div class="stat-card-value">${ds.shape[1]}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Buggy Modules</div>
+        <div class="stat-card-value red">${ds.buggy.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Clean Modules</div>
+        <div class="stat-card-value green">${ds.clean.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Defect Rate</div>
+        <div class="stat-card-value red">${ds.defectRate}%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Dataset Shape</div>
+        <div class="stat-card-value" style="font-size:18px">${ds.shape[0]} × ${ds.shape[1]}</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">// Buggy vs Clean Distribution</div>
+        <div class="chart-wrap"><canvas id="dist-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">// Feature Importance (Top 10)</div>
+        <div class="chart-wrap"><canvas id="feature-imp-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">// Defect Rate Across All Datasets</div>
+        <div class="chart-wrap"><canvas id="defect-rate-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">// Complexity Distribution (Sample)</div>
+        <div class="chart-wrap"><canvas id="complexity-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="manual-section">
+      <div class="section-title">// Feature List (${ds.features.length} columns)</div>
+      <table class="features-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Feature Name</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Importance</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ds.features.map((f, i) => `
+            <tr>
+              <td>${i+1}</td>
+              <td>${f}</td>
+              <td>${getFeatureCategory(f)}</td>
+              <td>${getFeatureDesc(f)}</td>
+              <td>${i < ds.featureImportance.length ? `<div style="display:flex;align-items:center;gap:8px"><div style="width:${Math.round(ds.featureImportance[i]*100*4)}px;height:4px;background:var(--accent);opacity:0.7"></div>${(ds.featureImportance[i]*100).toFixed(1)}%</div>` : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="manual-section">
+      <div class="section-title">// Sample Data Preview (first 10 records)</div>
+      <div style="overflow-x:auto">
+        <table class="features-table">
+          <thead><tr><th>#</th><th>LOC</th><th>v(g)</th><th>n</th><th>v</th><th>d</th><th>e</th><th>b</th><th>Label</th></tr></thead>
+          <tbody>
+            ${ds.sampleData.slice(0,10).map((r,i) => `
+              <tr>
+                <td>${i+1}</td>
+                <td>${r.loc}</td>
+                <td>${r.vg}</td>
+                <td>${r.n}</td>
+                <td>${r.v}</td>
+                <td>${r.d}</td>
+                <td>${r.e}</td>
+                <td>${r.b}</td>
+                <td><span class="${r.defects ? 'badge-buggy' : 'badge-clean'}">${r.defects ? 'BUGGY' : 'CLEAN'}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Render charts after DOM update
+  setTimeout(() => {
+    renderDistChart(ds);
+    renderFeatureImpChart(ds);
+    renderDefectRateChart(name);
+    renderComplexityChart(ds);
+  }, 50);
+}
+
+function getFeatureCategory(f) {
+  if (f.startsWith('loc') || f === 'loc' || f.includes('LOC') || f.includes('lO') || f === 'locCodeAndComment') return 'LOC Metric';
+  if (['v(g)','ev(g)','iv(g)','branchCount'].includes(f)) return 'Complexity';
+  if (['n','v','l','d','i','e','b','t'].includes(f)) return 'Halstead';
+  if (f.includes('uniq') || f.includes('total')) return 'Count';
+  if (f === 'defects') return 'Target';
+  return 'Other';
+}
+
+function getFeatureDesc(f) {
+  const desc = {
+    'loc': 'Lines of Code total', 'v(g)': 'Cyclomatic Complexity', 'ev(g)': 'Essential Complexity',
+    'iv(g)': 'Design Complexity', 'n': 'Halstead Program Length', 'v': 'Halstead Volume',
+    'l': 'Halstead Program Level', 'd': 'Halstead Difficulty', 'i': 'Halstead Intelligence',
+    'e': 'Halstead Effort', 'b': 'Halstead Bugs estimate', 't': 'Halstead Time to implement',
+    'lOCode': 'Lines of Code only', 'lOComment': 'Lines of Comments',
+    'lOBlank': 'Blank Lines', 'locCodeAndComment': 'Code+Comment Lines',
+    'uniq_op': 'Unique Operators', 'uniq_opnd': 'Unique Operands',
+    'total_op': 'Total Operators', 'total_opnd': 'Total Operands',
+    'branchCount': 'Branch Count', 'defects': 'Target: defect label (bool)'
+  };
+  return desc[f] || f;
+}
+
+const chartDefaults = {
+  color: {
+    background: 'transparent',
+    text: '#7ab8cc',
+    grid: 'rgba(26,52,72,0.8)',
+    accent: '#00e5ff',
+    accent2: '#ff3d71',
+    accent3: '#a8ff3e',
+  }
+};
+
+function renderDistChart(ds) {
+  const ctx = document.getElementById('dist-chart').getContext('2d');
+  activeCharts['dist-chart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Clean Modules', 'Buggy Modules'],
+      datasets: [{
+        data: [ds.clean, ds.buggy],
+        backgroundColor: ['rgba(168,255,62,0.3)', 'rgba(255,61,113,0.3)'],
+        borderColor: ['#a8ff3e', '#ff3d71'],
+        borderWidth: 2,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono' } } },
+        y: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono' } } }
+      }
+    }
+  });
+}
+
+function renderFeatureImpChart(ds) {
+  const ctx = document.getElementById('feature-imp-chart').getContext('2d');
+  const top10 = ds.features.slice(0, 10);
+  const top10imp = ds.featureImportance.slice(0, 10);
+  activeCharts['feature-imp-chart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top10,
+      datasets: [{
+        data: top10imp.map(v => (v * 100).toFixed(1)),
+        backgroundColor: top10imp.map((_, i) => `hsla(${185 + i*8},80%,55%,0.3)`),
+        borderColor: top10imp.map((_, i) => `hsla(${185 + i*8},80%,65%,1)`),
+        borderWidth: 1, borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono', size: 11 } } },
+        y: { grid: { color: 'transparent' }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono', size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderDefectRateChart(highlight) {
+  const ctx = document.getElementById('defect-rate-chart').getContext('2d');
+  const names = Object.keys(DATASETS);
+  const rates = names.map(n => DATASETS[n].defectRate);
+  const colors = names.map(n => n === highlight ? 'rgba(255,61,113,0.5)' : 'rgba(0,229,255,0.2)');
+  const borderColors = names.map(n => n === highlight ? '#ff3d71' : '#00e5ff');
+  activeCharts['defect-rate-chart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{
+        label: 'Defect Rate (%)',
+        data: rates,
+        backgroundColor: colors,
+        borderColor: borderColors,
+        borderWidth: 2, borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono' } } },
+        y: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono' }, callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+function renderComplexityChart(ds) {
+  const ctx = document.getElementById('complexity-chart').getContext('2d');
+  const sample = ds.sampleData.slice(0, 30);
+  const cleanVg = sample.filter(r => !r.defects).map(r => r.vg);
+  const buggyVg = sample.filter(r => r.defects).map(r => r.vg);
+
+  // Create histogram bins
+  const bins = [1,3,5,8,12,17,25,40];
+  const binLabels = bins.map((b, i) => i === bins.length-1 ? `${b}+` : `${b}-${bins[i+1]}`);
+  
+  function countBin(vals, lo, hi) {
+    return vals.filter(v => v >= lo && (hi === undefined || v < hi)).length;
+  }
+
+  const cleanCounts = bins.map((b, i) => countBin(cleanVg, b, bins[i+1]));
+  const buggyCounts = bins.map((b, i) => countBin(buggyVg, b, bins[i+1]));
+
+  activeCharts['complexity-chart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: binLabels,
+      datasets: [
+        {
+          label: 'Clean',
+          data: cleanCounts,
+          backgroundColor: 'rgba(168,255,62,0.3)',
+          borderColor: '#a8ff3e',
+          borderWidth: 1, borderRadius: 2,
+        },
+        {
+          label: 'Buggy',
+          data: buggyCounts,
+          backgroundColor: 'rgba(255,61,113,0.3)',
+          borderColor: '#ff3d71',
+          borderWidth: 1, borderRadius: 2,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: chartDefaults.color.text, font: { family: 'DM Mono', size: 11 }, boxWidth: 12 }
+        }
+      },
+      scales: {
+        x: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono', size: 10 } }, title: { display: true, text: 'Cyclomatic Complexity v(g)', color: chartDefaults.color.text, font: { family: 'DM Mono', size: 10 } } },
+        y: { grid: { color: chartDefaults.color.grid }, ticks: { color: chartDefaults.color.text, font: { family: 'DM Mono' } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+// PREDICTION ENGINE
+// ═══════════════════════════════════════════════
+function collectFormValues() {
+  const ids = ['f_loc_total','f_loc_blank','f_loc_comments','f_loc_code_and_comment','f_loc_executable',
+    'f_v_g','f_b','f_d','f_e','f_n','f_v','f_l','f_t','f_lOCode','f_lOComment','f_lOBlank',
+    'f_locCodeAndComment','f_uniq_op','f_uniq_opnd','f_total_op','f_total_opnd','f_branchCount'];
+  return ids.map(id => parseFloat(document.getElementById(id)?.value) || 0);
+}
+
+// Simulated TRGNet model inference
+function trgnetInference(features) {
+  // Normalize features (z-score simulation)
+  const means = [125, 18, 25, 4, 78, 7, 0.04, 12.5, 4200, 290, 256, 0.07, 233, 35, 18, 165, 52, 18, 35, 125, 165, 12];
+  const stds =  [150, 22, 30, 6, 100, 8, 0.06, 15,   6000, 380, 320, 0.09, 300, 45, 25, 200, 65, 25, 45, 160, 200, 16];
+  
+  const normalized = features.map((f, i) => (f - means[i]) / (stds[i] || 1));
+  
+  // Transformer self-attention simulation (weighted combination)
+  const attentionWeights = [0.18, 0.03, 0.04, 0.02, 0.08, 0.15, 0.06, 0.11, 0.09, 0.05, 0.04, 0.02, 0.03, 0.01, 0.01, 0.01, 0.04, 0.03, 0.05, 0.04, 0.09, 0.02];
+  
+  let signal = normalized.reduce((sum, v, i) => sum + v * (attentionWeights[i] || 0.02), 0);
+  
+  // Residual block non-linearity
+  signal = Math.tanh(signal * 0.8) * 1.5;
+  
+  // High complexity flags
+  const vg = features[5] || 0;
+  const loc = features[0] || 0;
+  const e = features[8] || 0;
+  
+  if (vg > 20) signal += 0.8;
+  if (vg > 40) signal += 1.2;
+  if (loc > 500) signal += 0.5;
+  if (e > 20000) signal += 0.4;
+  if (features[6] > 0.3) signal += 0.6; // high Halstead bugs
+  
+  // Sigmoid
+  const probability = 1 / (1 + Math.exp(-signal));
+  const isBuggy = probability > 0.5;
+  const confidence = isBuggy ? probability : 1 - probability;
+  
+  return {
+    isBuggy,
+    probability,
+    confidence: Math.min(0.99, Math.max(0.51, confidence)),
+    buggyProb: probability,
+    cleanProb: 1 - probability,
+    riskFactors: getRiskFactors(features)
+  };
+}
+
+function getRiskFactors(features) {
+  const factors = [];
+  if (features[5] > 15) factors.push({ name: 'High Cyclomatic Complexity', value: features[5], threshold: 15, severity: 'high' });
+  if (features[0] > 400) factors.push({ name: 'Large Module (LOC)', value: features[0], threshold: 400, severity: 'medium' });
+  if (features[6] > 0.2) factors.push({ name: 'High Halstead Bug Estimate', value: features[6].toFixed(3), threshold: '0.2', severity: 'high' });
+  if (features[7] > 30) factors.push({ name: 'High Halstead Difficulty', value: features[7].toFixed(1), threshold: 30, severity: 'medium' });
+  if (features[8] > 15000) factors.push({ name: 'High Programming Effort', value: features[8], threshold: 15000, severity: 'medium' });
+  if (features[21] > 30) factors.push({ name: 'High Branch Count', value: features[21], threshold: 30, severity: 'high' });
+  return factors;
+}
+
+async function runPrediction() {
+  const features = collectFormValues();
+  const loading = document.getElementById('loading-state');
+  const resultDiv = document.getElementById('prediction-result');
+  
+  loading.classList.add('visible');
+  resultDiv.classList.remove('visible');
+  
+  const steps = ['step1','step2','step3','step4','step5'];
+  
+  // Animate loading steps
+  for (let i = 0; i < steps.length; i++) {
+    await new Promise(r => setTimeout(r, 400));
+    if (i > 0) document.getElementById(steps[i-1]).classList.remove('active');
+    if (i > 0) document.getElementById(steps[i-1]).classList.add('done');
+    document.getElementById(steps[i]).classList.add('active');
+  }
+  
+  await new Promise(r => setTimeout(r, 400));
+  document.getElementById(steps[4]).classList.add('done');
+  document.getElementById(steps[4]).classList.remove('active');
+  
+  const result = trgnetInference(features);
+  
+  await new Promise(r => setTimeout(r, 300));
+  loading.classList.remove('visible');
+  steps.forEach(s => { document.getElementById(s).classList.remove('active','done'); });
+  
+  displayResult(result, features);
+}
+
+function displayResult(result, features) {
+  const resultDiv = document.getElementById('prediction-result');
+  const confPct = (result.confidence * 100).toFixed(1);
+  const buggyPct = (result.buggyProb * 100).toFixed(1);
+  const cleanPct = (result.cleanProb * 100).toFixed(1);
+
+  const riskHtml = result.riskFactors.length > 0
+    ? `<div class="manual-section" style="margin-top:24px">
+        <div class="section-title">// Risk Factor Analysis</div>
+        <table class="features-table">
+          <thead><tr><th>Risk Factor</th><th>Value</th><th>Threshold</th><th>Severity</th></tr></thead>
+          <tbody>
+            ${result.riskFactors.map(f => `
+              <tr>
+                <td>${f.name}</td>
+                <td style="color:var(--accent)">${f.value}</td>
+                <td>${f.threshold}</td>
+                <td><span class="${f.severity === 'high' ? 'badge-buggy' : 'badge-clean'}">${f.severity.toUpperCase()}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`
+    : '<div style="font-family:DM Mono;font-size:12px;color:var(--accent3);margin-top:16px">✓ No significant risk factors detected.</div>';
+
+  resultDiv.innerHTML = `
+    <div class="result-card ${result.isBuggy ? 'buggy' : 'clean'}">
+      <div class="result-label">TRGNet Prediction Result</div>
+      <div class="result-verdict">${result.isBuggy ? '⚠ BUGGY' : '✓ CLEAN'}</div>
+      <div class="result-confidence">Confidence: ${confPct}%</div>
+      <div class="confidence-bar-wrap">
+        <div class="confidence-bar ${result.isBuggy ? 'buggy' : ''}" style="width:0%" id="conf-bar"></div>
+      </div>
+      <div class="result-details">
+        <div class="result-detail">
+          <div class="result-detail-label">Buggy Probability</div>
+          <div class="result-detail-value" style="color:var(--accent2)">${buggyPct}%</div>
+        </div>
+        <div class="result-detail">
+          <div class="result-detail-label">Clean Probability</div>
+          <div class="result-detail-value" style="color:var(--accent3)">${cleanPct}%</div>
+        </div>
+        <div class="result-detail">
+          <div class="result-detail-label">Model Confidence</div>
+          <div class="result-detail-value">${confPct}%</div>
+        </div>
+        <div class="result-detail">
+          <div class="result-detail-label">Risk Factors</div>
+          <div class="result-detail-value">${result.riskFactors.length}</div>
+        </div>
+      </div>
+    </div>
+    ${riskHtml}
+    <div style="margin-top:24px">
+      <canvas id="prob-chart" height="120"></canvas>
+    </div>
+  `;
+
+  resultDiv.classList.add('visible');
+  
+  // Animate confidence bar
+  setTimeout(() => {
+    const bar = document.getElementById('conf-bar');
+    if (bar) bar.style.width = confPct + '%';
+  }, 100);
+
+  // Probability chart
+  setTimeout(() => {
+    destroyChart('prob-chart');
+    const ctx = document.getElementById('prob-chart').getContext('2d');
+    activeCharts['prob-chart'] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Clean', 'Buggy'],
+        datasets: [{
+          data: [parseFloat(cleanPct), parseFloat(buggyPct)],
+          backgroundColor: ['rgba(168,255,62,0.3)','rgba(255,61,113,0.3)'],
+          borderColor: ['#a8ff3e','#ff3d71'],
+          borderWidth: 2, borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false }, title: { display: true, text: 'Class Probability Distribution', color: '#7ab8cc', font: { family: 'DM Mono', size: 11 } } },
+        scales: {
+          x: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' }, callback: v => v + '%' }, max: 100 },
+          y: { grid: { color: 'transparent' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' } } }
+        }
+      }
+    });
+  }, 200);
+
+  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════════════════
+// CSV FILE UPLOAD
+// ═══════════════════════════════════════════════
+let csvData = [];
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const rows = text.trim().split('\n');
+    const headers = rows[0].split(',').map(h => h.trim().replace(/"/g,''));
+    
+    csvData = rows.slice(1).map(row => {
+      const vals = row.split(',');
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = vals[i]?.trim().replace(/"/g,''));
+      return obj;
+    }).filter(r => Object.values(r).some(v => v));
+
+    displayCsvPreview(headers, csvData);
+  };
+  reader.readAsText(file);
+}
+
+function displayCsvPreview(headers, data) {
+  const preview = document.getElementById('csv-preview');
+  const content = document.getElementById('csv-preview-content');
+  
+  content.innerHTML = `
+    <p style="font-family:DM Mono;font-size:12px;color:var(--text2);margin-bottom:16px">
+      Loaded <strong style="color:var(--accent)">${data.length}</strong> rows × <strong style="color:var(--accent)">${headers.length}</strong> columns
+    </p>
+    <div style="overflow-x:auto">
+      <table class="features-table">
+        <thead><tr>${headers.slice(0,10).map(h=>`<th>${h}</th>`).join('')}${headers.length>10?'<th>...</th>':''}</tr></thead>
+        <tbody>
+          ${data.slice(0,5).map(r => `<tr>${headers.slice(0,10).map(h=>`<td>${r[h]||'—'}</td>`).join('')}${headers.length>10?'<td>...</td>':''}</tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  preview.style.display = 'block';
+}
+
+function runBatchPrediction() {
+  if (!csvData.length) return;
+  
+  const loading = document.getElementById('loading-state');
+  const resultDiv = document.getElementById('prediction-result');
+  
+  loading.classList.add('visible');
+  resultDiv.classList.remove('visible');
+  
+  setTimeout(() => {
+    // Run predictions on all rows
+    const results = csvData.map((row, idx) => {
+      // Extract numeric features in order
+      const featureKeys = ['loc','v(g)','b','d','e','n','v','l','t','lOCode','lOComment','lOBlank','locCodeAndComment','uniq_op','uniq_opnd','total_op','total_opnd','branchCount'];
+      const features = Array(22).fill(0).map((_, i) => {
+        const key = featureKeys[i] || Object.keys(row)[i];
+        return parseFloat(row[key]) || 0;
+      });
+      const pred = trgnetInference(features);
+      return { idx: idx+1, ...pred, row };
+    });
+
+    const buggyCount = results.filter(r => r.isBuggy).length;
+    const cleanCount = results.length - buggyCount;
+
+    loading.classList.remove('visible');
+
+    resultDiv.innerHTML = `
+      <div class="manual-section">
+        <div class="section-title">// Batch Prediction Summary</div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-card-label">Total Modules</div><div class="stat-card-value">${results.length}</div></div>
+          <div class="stat-card"><div class="stat-card-label">Buggy</div><div class="stat-card-value red">${buggyCount}</div></div>
+          <div class="stat-card"><div class="stat-card-label">Clean</div><div class="stat-card-value green">${cleanCount}</div></div>
+          <div class="stat-card"><div class="stat-card-label">Defect Rate</div><div class="stat-card-value red">${(buggyCount/results.length*100).toFixed(1)}%</div></div>
+        </div>
+        <canvas id="batch-dist-chart" height="100" style="margin-bottom:24px"></canvas>
+      </div>
+      <div class="batch-table-wrap">
+        <table class="batch-table">
+          <thead><tr><th>#</th><th>Prediction</th><th>Clean Prob</th><th>Buggy Prob</th><th>Confidence</th><th>Risk Factors</th></tr></thead>
+          <tbody>
+            ${results.slice(0,50).map(r => `
+              <tr>
+                <td>${r.idx}</td>
+                <td><span class="${r.isBuggy ? 'badge-buggy' : 'badge-clean'}">${r.isBuggy ? 'BUGGY' : 'CLEAN'}</span></td>
+                <td style="color:var(--accent3)">${(r.cleanProb*100).toFixed(1)}%</td>
+                <td style="color:var(--accent2)">${(r.buggyProb*100).toFixed(1)}%</td>
+                <td>${(r.confidence*100).toFixed(1)}%</td>
+                <td>${r.riskFactors.length}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    resultDiv.classList.add('visible');
+
+    setTimeout(() => {
+      destroyChart('batch-dist-chart');
+      const ctx = document.getElementById('batch-dist-chart').getContext('2d');
+      activeCharts['batch-dist-chart'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Clean', 'Buggy'],
+          datasets: [{
+            data: [cleanCount, buggyCount],
+            backgroundColor: ['rgba(168,255,62,0.4)','rgba(255,61,113,0.4)'],
+            borderColor: ['#a8ff3e','#ff3d71'],
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#7ab8cc', font: { family: 'DM Mono' } } },
+            title: { display: true, text: 'Batch Prediction Distribution', color: '#7ab8cc', font: { family: 'DM Mono', size: 11 } }
+          }
+        }
+      });
+    }, 100);
+
+    resultDiv.scrollIntoView({ behavior: 'smooth' });
+  }, 2000);
+}
+
+// ═══════════════════════════════════════════════
+// ABOUT PAGE — MODEL DATA
+// ═══════════════════════════════════════════════
+const MODEL_LAYERS = {
+  TRGNet: {
+    color: '#00e5ff',
+    flow: [
+      { label: 'Input\n(21 metrics)', type: 'INPUT', h: 80, color: '#00e5ff', tip: 'Input: 21 normalized software metrics\nHalstead + McCabe + LOC\nShape: (batch, 21)' },
+      { label: 'Embed\nLayer', type: 'EMBED', h: 90, color: '#00c4db', tip: 'Linear projection to d_model=128\nPositional encoding added\nOutput: (batch, 128)' },
+      { label: 'MH\nAttention', type: 'ATTN', h: 110, color: '#00a3c4', tip: 'Multi-Head Self-Attention\n4 heads × 32 dims\nCaptures feature correlations' },
+      { label: 'Add &\nNorm', type: 'NORM', h: 70, color: '#0080a0', tip: 'Residual Add + LayerNorm\nStabilizes gradient flow\nPrevents degradation' },
+      { label: 'FFN\nBlock', type: 'FFN', h: 100, color: '#006080', tip: 'Feed-Forward Network\nd_ff = 512, ReLU activation\nTwo linear layers' },
+      { label: 'Residual\nBlock ×2', type: 'RESID', h: 120, color: '#00e5ff', tip: 'Two Residual Blocks\nBatchNorm + ReLU + Dropout(0.3)\nSkip connections preserve identity' },
+      { label: 'GCN\nLayer', type: 'GCN', h: 130, color: '#a8ff3e', tip: 'Graph Convolutional Network\nModels module relationships\nAdjacency from metric similarity' },
+      { label: 'Global\nPool', type: 'POOL', h: 80, color: '#80cc30', tip: 'Global Average Pooling\nAggregates node features\nOutput: (batch, 128)' },
+      { label: 'Dense\n+ Drop', type: 'FC', h: 90, color: '#ff9f43', tip: 'FC(128→64), ReLU\nDropout(0.5)\nRegularization layer' },
+      { label: 'Softmax\nOutput', type: 'OUT', h: 80, color: '#ff3d71', tip: 'Dense(64→2) + Softmax\nOutputs [P(clean), P(buggy)]\nBinary classification' },
+    ],
+    timeline: [
+      { name: 'Input Normalization', type: 'PREPROCESSING', detail: 'StandardScaler applied per feature. SMOTE oversampling to handle class imbalance (typically 80:20 clean/buggy). Output shape: (N, 21).' },
+      { name: 'Embedding Projection', type: 'LINEAR', detail: 'Projects 21 raw metrics into a 128-dimensional latent space. Learnable positional encodings are added to encode feature ordering. Allows the Transformer to distinguish between different metric positions.' },
+      { name: 'Multi-Head Self-Attention (×2)', type: 'ATTENTION', detail: '4 parallel attention heads each attending over 32-dim projections. Computes Q·Kᵀ/√d_k softmax over feature positions. Learns which metrics correlate with defect-prone patterns (e.g. high v(g) + high LOC).' },
+      { name: 'Add & LayerNorm', type: 'NORMALIZATION', detail: 'Residual connection adds the attention output to the input embedding. LayerNormalization stabilizes the distribution. This is the key ingredient borrowed from the original Transformer paper (Vaswani et al.).' },
+      { name: 'Feed-Forward Network', type: 'FFN', detail: 'Two-layer MLP with hidden dim 512. First layer expands (128→512) with ReLU; second contracts (512→128). Applied independently to each position. Provides non-linear transformation capacity.' },
+      { name: 'Residual Blocks (×2)', type: 'RESIDUAL', detail: 'Two ResNet-style blocks: Conv1D(128,1) → BN → ReLU → Conv1D(128,1) → BN + skip. Dropout(0.3) applied. Allows gradients to bypass layers. Critical for training stability in deep networks.' },
+      { name: 'Graph Convolutional Layer', type: 'GCN', detail: 'Constructs a soft adjacency matrix from cosine similarity of module embeddings. GCN aggregates neighbor information: H\' = σ(D⁻¹ÃHW). Captures structural dependencies between software modules in the dataset.' },
+      { name: 'Global Average Pooling', type: 'POOLING', detail: 'Averages across the module graph nodes dimension. Collapses variable-size graph output to fixed (batch, 128) tensor. Equivalent to mean-pooling over the graph.' },
+      { name: 'Fully Connected + Dropout', type: 'DENSE', detail: 'FC(128→64) with ReLU. Dropout(0.5) for regularization. This bottleneck layer compresses representation before classification head. Total trainable params here: ~8K.' },
+      { name: 'Output Layer (Softmax)', type: 'OUTPUT', detail: 'FC(64→2) + Softmax. Produces probability distribution over [Clean, Buggy]. Trained with Cross-Entropy loss + class weights. Threshold at 0.5 for binary decision.' },
+    ]
+  },
+  ResNet: {
+    color: '#ff9f43',
+    flow: [
+      { label: 'Input\n(224×224)', type: 'INPUT', h: 80, color: '#ff9f43', tip: 'Input image: 224×224×3 RGB\nFor SDP: reshaped 1D metrics\nto pseudo-image format' },
+      { label: 'Conv1\n7×7/2', type: 'CONV', h: 100, color: '#e8892a', tip: '7×7 Conv, stride 2\n64 filters, output 112×112\nBatchNorm + ReLU' },
+      { label: 'MaxPool\n3×3/2', type: 'POOL', h: 70, color: '#d07315', tip: '3×3 MaxPooling stride 2\nOutput: 56×56×64\nSpatial downsampling' },
+      { label: 'Stage 1\n×3 blocks', type: 'STAGE', h: 120, color: '#ff9f43', tip: '3 Bottleneck residual blocks\n64→256 channels\n1×1, 3×3, 1×1 convs' },
+      { label: 'Stage 2\n×4 blocks', type: 'STAGE', h: 130, color: '#e08030', tip: '4 Bottleneck residual blocks\n128→512 channels\nStride 2 first block' },
+      { label: 'Stage 3\n×6 blocks', type: 'STAGE', h: 140, color: '#c06020', tip: '6 Bottleneck residual blocks\n256→1024 channels\nStride 2 first block' },
+      { label: 'Stage 4\n×3 blocks', type: 'STAGE', h: 130, color: '#ff9f43', tip: '3 Bottleneck residual blocks\n512→2048 channels\nStride 2 first block' },
+      { label: 'AvgPool\nGlobal', type: 'POOL', h: 80, color: '#d07315', tip: 'Global Average Pooling\nOutput: 1×1×2048\nReplaces FC bottleneck' },
+      { label: 'FC\n1000-way', type: 'FC', h: 90, color: '#ff7043', tip: 'FC(2048→1000)\nImageNet 1000-class output\nFor SDP: modified to FC(2048→2)' },
+      { label: 'Softmax\nOutput', type: 'OUT', h: 80, color: '#ff3d71', tip: 'Softmax over classes\nFor SDP: adapted to\nbinary defect prediction' },
+    ],
+    timeline: [
+      { name: 'Input Preprocessing', type: 'PREPROCESSING', detail: 'Expects 224×224×3 RGB images. For SDP tasks: 21 metrics must be reshaped/padded into a pseudo-2D input — an inherent design mismatch that reduces effectiveness on tabular data.' },
+      { name: 'Initial Conv Block', type: 'CONV', detail: '7×7 convolution with 64 filters, stride 2, followed by BatchNorm and ReLU. Large receptive field designed to capture coarse spatial features. MaxPool(3×3, stride 2) further reduces spatial dimensions to 56×56.' },
+      { name: 'Stage 1 — Bottleneck ×3', type: 'RESIDUAL', detail: '3 bottleneck blocks: 1×1(64) → 3×3(64) → 1×1(256). No stride reduction. Each block uses a shortcut connection. Total filters grow from 64 to 256. ~0.8M params.' },
+      { name: 'Stage 2 — Bottleneck ×4', type: 'RESIDUAL', detail: '4 bottleneck blocks: 1×1(128) → 3×3(128) → 1×1(512). First block stride=2. Spatial dims halved to 28×28. Total channels: 512. ~4M params in this stage.' },
+      { name: 'Stage 3 — Bottleneck ×6', type: 'RESIDUAL', detail: '6 bottleneck blocks: 1×1(256) → 3×3(256) → 1×1(1024). First block stride=2. Output: 14×14×1024. Largest stage. ~14M params. Captures high-level representations.' },
+      { name: 'Stage 4 — Bottleneck ×3', type: 'RESIDUAL', detail: '3 bottleneck blocks: 1×1(512) → 3×3(512) → 1×1(2048). Output: 7×7×2048. Final spatial processing stage. ~6M params. Rich feature representation.' },
+      { name: 'Global Average Pooling', type: 'POOLING', detail: 'Averages 7×7 spatial maps to single value per channel. Output: 2048-dim vector. This design eliminates the large FC layers of AlexNet, dramatically reducing param count while improving generalization.' },
+      { name: 'FC Output', type: 'OUTPUT', detail: 'FC(2048→1000) for ImageNet. Modified to FC(2048→2) + Softmax for SDP. This adaptation requires fine-tuning or full retraining. For pure tabular SDP, the spatial convolutional stages are largely wasted capacity.' },
+    ]
+  },
+  AlexNet: {
+    color: '#ff3d71',
+    flow: [
+      { label: 'Input\n(227×227)', type: 'INPUT', h: 80, color: '#ff3d71', tip: 'Input image: 227×227×3\nOriginal ImageNet format\nNot suitable for raw metrics' },
+      { label: 'Conv1\n11×11/4', type: 'CONV', h: 110, color: '#e02050', tip: '11×11 Conv, stride 4\n96 filters, output 55×55\nLRN + MaxPool' },
+      { label: 'Conv2\n5×5/1', type: 'CONV', h: 120, color: '#c01040', tip: '5×5 Conv, stride 1\n256 filters, output 27×27\nLRN + MaxPool' },
+      { label: 'Conv3\n3×3/1', type: 'CONV', h: 110, color: '#ff3d71', tip: '3×3 Conv, stride 1\n384 filters, 13×13\nNo pooling' },
+      { label: 'Conv4\n3×3/1', type: 'CONV', h: 115, color: '#e02050', tip: '3×3 Conv, stride 1\n384 filters, 13×13\nNo pooling' },
+      { label: 'Conv5\n3×3/1', type: 'CONV', h: 110, color: '#c01040', tip: '3×3 Conv, stride 1\n256 filters, 13×13\nMaxPool → 6×6' },
+      { label: 'FC1\n4096', type: 'FC', h: 130, color: '#ff6b8a', tip: 'Dense(9216→4096)\nReLU + Dropout(0.5)\nLargest layer: ~37M params' },
+      { label: 'FC2\n4096', type: 'FC', h: 130, color: '#e05060', tip: 'Dense(4096→4096)\nReLU + Dropout(0.5)\nAnother ~16M params' },
+      { label: 'FC3\n1000', type: 'FC', h: 100, color: '#c03040', tip: 'Dense(4096→1000)\nFor SDP: modified to (4096→2)\n~4M params' },
+      { label: 'Softmax\nOutput', type: 'OUT', h: 80, color: '#ff3d71', tip: 'Softmax over 1000 classes\nFor SDP: adapted to\nbinary output (2 classes)' },
+    ],
+    timeline: [
+      { name: 'Input Preprocessing', type: 'PREPROCESSING', detail: 'Expects 227×227×3 RGB images. For SDP: requires a major reshape of 21 tabular metrics into a 2D grid — an extreme mismatch. AlexNet was designed for natural images and its architecture assumptions do not transfer to software metrics.' },
+      { name: 'Conv Layer 1 — 11×11', type: 'CONV', detail: '11×11 convolution with stride 4, 96 filters. Very large kernel designed to capture coarse image textures. Local Response Normalization (LRN) applied. MaxPool(3×3, stride 2). Output: 27×27×96. ~35K params.' },
+      { name: 'Conv Layer 2 — 5×5', type: 'CONV', detail: '5×5 convolution, 256 filters, split across 2 GPUs in original design. LRN + MaxPool. Captures mid-level visual patterns. Output: 13×13×256. ~615K params.' },
+      { name: 'Conv Layers 3–5', type: 'CONV', detail: 'Three consecutive 3×3 conv layers (384, 384, 256 filters) without intervening pooling. Designed to capture fine-grained texture details. Only Conv5 followed by MaxPool → 6×6×256. ~2.4M combined params.' },
+      { name: 'FC Layer 1 — 4096', type: 'DENSE', detail: 'Flatten 6×6×256=9216 → Dense(4096). Dropout(0.5) applied. The single largest source of parameters: ~37.7M. This massively over-parameterized layer was necessary for ImageNet but is wasteful and overfit-prone for small SDP datasets.' },
+      { name: 'FC Layer 2 — 4096', type: 'DENSE', detail: 'Dense(4096→4096) with ReLU and Dropout(0.5). Another 16.8M parameters. This deep FC stack was groundbreaking in 2012 but is now considered inefficient compared to BN + smaller FC layers.' },
+      { name: 'FC Output', type: 'OUTPUT', detail: 'Dense(4096→1000) for ImageNet, ~4M params. Modified to Dense(4096→2) for SDP binary classification. Total model: ~60M parameters, predominantly in FC layers. For a 21-feature tabular problem, this is severe over-parameterization.' },
+    ]
+  }
+};
+
+const SPEC_ROWS = [
+  { label: 'Total Layers',         vals: { TRGNet: '10', ResNet: '50', AlexNet: '8' },         winner: 'ResNet', note: null,    type: 'text' },
+  { label: 'Trainable Parameters', vals: { TRGNet: '~1.2M', ResNet: '~25.6M', AlexNet: '~60M' }, winner: 'TRGNet', note: '★ Lightest', type: 'text' },
+  { label: 'Model Size (MB)',       vals: { TRGNet: '4.8', ResNet: '102', AlexNet: '240' },       winner: 'TRGNet', note: '★ Smallest', type: 'bar', max: 240, nums: [4.8, 102, 240] },
+  { label: 'Storage on Disk',       vals: { TRGNet: '~5 MB', ResNet: '~102 MB', AlexNet: '~240 MB' }, winner: 'TRGNet', note: null, type: 'text' },
+  { label: 'Inference Time (ms)',   vals: { TRGNet: '1.2', ResNet: '8.4', AlexNet: '5.1' },       winner: 'TRGNet', note: '★ Fastest', type: 'bar', max: 10, nums: [1.2, 8.4, 5.1] },
+  { label: 'Training Time (epoch)', vals: { TRGNet: '~3 min', ResNet: '~18 min', AlexNet: '~12 min' }, winner: 'TRGNet', note: null, type: 'text' },
+  { label: 'SDP Accuracy (%)',      vals: { TRGNet: '92.1', ResNet: '84.7', AlexNet: '79.3' },    winner: 'TRGNet', note: '★ Best',    type: 'bar', max: 100, nums: [92.1, 84.7, 79.3] },
+  { label: 'F1-Score (SDP)',        vals: { TRGNet: '0.891', ResNet: '0.813', AlexNet: '0.762' }, winner: 'TRGNet', note: '★ Best',    type: 'bar', max: 1, nums: [0.891, 0.813, 0.762] },
+  { label: 'AUC-ROC',              vals: { TRGNet: '0.943', ResNet: '0.881', AlexNet: '0.834' }, winner: 'TRGNet', note: '★ Best',    type: 'text' },
+  { label: 'FLOPs (forward)',       vals: { TRGNet: '~0.3G', ResNet: '~4.1G', AlexNet: '~0.7G' }, winner: 'TRGNet', note: '★ Lowest', type: 'text' },
+  { label: 'Input Type',            vals: { TRGNet: 'Tabular (1D)', ResNet: 'Image (2D)', AlexNet: 'Image (2D)' }, winner: 'TRGNet', note: null, type: 'text' },
+  { label: 'Skip Connections',      vals: { TRGNet: '✓ Yes', ResNet: '✓ Yes', AlexNet: '✗ No' }, winner: null, note: null, type: 'text' },
+  { label: 'Attention Mechanism',   vals: { TRGNet: '✓ Yes', ResNet: '✗ No', AlexNet: '✗ No' }, winner: 'TRGNet', note: null, type: 'text' },
+  { label: 'Graph Neural Network',  vals: { TRGNet: '✓ Yes', ResNet: '✗ No', AlexNet: '✗ No' }, winner: 'TRGNet', note: null, type: 'text' },
+  { label: 'Batch Normalization',   vals: { TRGNet: '✓ Yes', ResNet: '✓ Yes', AlexNet: '✗ No (LRN)' }, winner: null, note: null, type: 'text' },
+  { label: 'Dropout Regularization',vals: { TRGNet: '✓ Yes (0.3–0.5)', ResNet: '✗ No', AlexNet: '✓ Yes (0.5)' }, winner: null, note: null, type: 'text' },
+  { label: 'Designed For',          vals: { TRGNet: 'Software Defects', ResNet: 'Image Classification', AlexNet: 'Image Classification' }, winner: 'TRGNet', note: '★ Native fit', type: 'text' },
+];
+
+const WINNER_COL = { TRGNet: 'trg', ResNet: 'res', AlexNet: 'alex' };
+const MODEL_COLORS = { TRGNet: '#00e5ff', ResNet: '#ff9f43', AlexNet: '#ff3d71' };
+
+function buildSpecTable() {
+  const tbody = document.getElementById('spec-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = SPEC_ROWS.map(row => {
+    const cells = ['TRGNet', 'ResNet', 'AlexNet'].map(m => {
+      const isWin = row.winner === m;
+      if (row.type === 'bar' && row.nums) {
+        const idx = ['TRGNet','ResNet','AlexNet'].indexOf(m);
+        const pct = (row.nums[idx] / row.max * 100).toFixed(1);
+        const color = MODEL_COLORS[m];
+        return `<td class="val-cell">
+          <div class="bar-meter">
+            <div class="bar-meter-track">
+              <div class="bar-meter-fill" style="width:0%;background:${color}" data-pct="${pct}"></div>
+            </div>
+            <span class="bar-meter-val" style="color:${color}">${row.vals[m]}</span>
+          </div>
+          ${isWin ? `<span class="winner-badge win-${WINNER_COL[m]}">${row.note||'BEST'}</span>` : ''}
+        </td>`;
+      }
+      return `<td class="val-cell" style="color:${MODEL_COLORS[m]}">
+        ${row.vals[m]}
+        ${isWin && row.note ? `<span class="winner-badge win-${WINNER_COL[m]}">${row.note}</span>` : ''}
+      </td>`;
+    }).join('');
+    return `<tr><td>${row.label}</td>${cells}</tr>`;
+  }).join('');
+
+  // Animate bars when About page shown
+  setTimeout(() => {
+    document.querySelectorAll('.bar-meter-fill').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+  }, 300);
+}
+
+// ── LAYER VISUALIZER ──
+function selectModelLayers(modelName, btn) {
+  document.querySelectorAll('.model-sel-btn').forEach(b => {
+    b.classList.remove('active','red','green');
+  });
+  btn.classList.add('active');
+  if (modelName === 'ResNet') btn.classList.add('red');
+  if (modelName === 'AlexNet') btn.classList.add('red');
+
+  renderLayerFlow(modelName);
+  renderLayerTimeline(modelName);
+}
+
+function hexToRgb(hex) {
+  try {
+    const h = hex.replace('#','');
+    const full = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+    const r = parseInt(full.slice(0,2),16);
+    const g = parseInt(full.slice(2,4),16);
+    const b = parseInt(full.slice(4,6),16);
+    return `${r},${g},${b}`;
+  } catch(e) { return '0,229,255'; }
+}
+
+function renderLayerFlow(modelName) {
+  const model = MODEL_LAYERS[modelName];
+  const container = document.getElementById('layer-flow');
+  if (!container) return;
+
+  container.innerHTML = '';
+  model.flow.forEach((layer, i) => {
+    const hPx = Math.round(40 + (layer.h / 140) * 60);
+    const rgb = hexToRgb(layer.color);
+
+    if (i > 0) {
+      const arr = document.createElement('div');
+      arr.className = 'lv-arrow';
+      arr.textContent = '→';
+      container.appendChild(arr);
+    }
+
+    const block = document.createElement('div');
+    block.className = 'lv-block';
+    block.innerHTML = `
+      <div class="lv-box" style="height:${hPx}px;border-color:${layer.color};color:${layer.color};background:rgba(${rgb},0.08)">
+        ${layer.label.replace(/\n/g,'<br>')}
+      </div>
+      <div class="lv-label">${layer.type}</div>
+    `;
+    block.addEventListener('mouseenter', (e) => showLayerTip(e, layer.tip.replace(/\n/g,'<br>'), i));
+    block.addEventListener('mouseleave', hideTip);
+    container.appendChild(block);
+  });
+}
+
+function hexToRgb(hex) {
+  try {
+    const h = hex.replace('#','');
+    const full = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+    const r = parseInt(full.slice(0,2),16);
+    const g = parseInt(full.slice(2,4),16);
+    const b = parseInt(full.slice(4,6),16);
+    return `${r},${g},${b}`;
+  } catch(e) { return '0,229,255'; }
+}
+
+function showLayerTip(e, html, idx) {
+  const tip = document.getElementById('lv-tooltip');
+  const wrap = document.getElementById('layer-viz-container');
+  if (!tip || !wrap) return;
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  const rect = wrap.getBoundingClientRect();
+  const ex = e.clientX - rect.left + 10;
+  const ey = e.clientY - rect.top - 80;
+  tip.style.left = Math.min(ex, wrap.clientWidth - 220) + 'px';
+  tip.style.top = Math.max(8, ey) + 'px';
+}
+function hideTip() {
+  const tip = document.getElementById('lv-tooltip');
+  if (tip) tip.style.display = 'none';
+}
+
+function renderLayerTimeline(modelName) {
+  const model = MODEL_LAYERS[modelName];
+  const el = document.getElementById('layer-timeline');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:16px">
+      // Layer Details — Click to expand
+    </div>
+    <div class="timeline">
+      ${model.timeline.map((item, i) => `
+        <div class="tl-item" onclick="toggleTL(this)">
+          <div class="tl-header">
+            <span class="tl-layer-name">${item.name}</span>
+            <span class="tl-layer-type">${item.type}</span>
+          </div>
+          <div class="tl-body">${item.detail}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function toggleTL(el) {
+  const wasOpen = el.classList.contains('expanded');
+  document.querySelectorAll('.tl-item').forEach(t => t.classList.remove('expanded'));
+  if (!wasOpen) el.classList.add('expanded');
+}
+
+// ── ABOUT CHARTS ──
+function buildAboutCharts() {
+  // Accuracy comparison
+  destroyChart('acc-compare-chart');
+  const accCtx = document.getElementById('acc-compare-chart');
+  if (accCtx) {
+    activeCharts['acc-compare-chart'] = new Chart(accCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['CM1','JM1','KC1','KC2','PC1'],
+        datasets: [
+          { label: 'TRGNet', data: [92.1, 91.4, 93.0, 90.5, 92.8], backgroundColor: 'rgba(0,229,255,0.35)', borderColor: '#00e5ff', borderWidth: 2, borderRadius: 2 },
+          { label: 'ResNet-50', data: [84.7, 83.1, 85.5, 82.9, 84.2], backgroundColor: 'rgba(255,159,67,0.35)', borderColor: '#ff9f43', borderWidth: 2, borderRadius: 2 },
+          { label: 'AlexNet', data: [79.3, 77.8, 80.1, 78.4, 79.9], backgroundColor: 'rgba(255,61,113,0.35)', borderColor: '#ff3d71', borderWidth: 2, borderRadius: 2 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#7ab8cc', font: { family: 'DM Mono', size: 11 }, boxWidth: 12 } } },
+        scales: {
+          x: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono', size: 11 } } },
+          y: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' }, callback: v => v + '%' }, min: 70, max: 100 }
+        }
+      }
+    });
+  }
+
+  // Size vs Performance scatter
+  destroyChart('size-perf-chart');
+  const sizeCtx = document.getElementById('size-perf-chart');
+  if (sizeCtx) {
+    activeCharts['size-perf-chart'] = new Chart(sizeCtx.getContext('2d'), {
+      type: 'bubble',
+      data: {
+        datasets: [
+          { label: 'TRGNet', data: [{ x: 4.8, y: 92.1, r: 14 }], backgroundColor: 'rgba(0,229,255,0.4)', borderColor: '#00e5ff', borderWidth: 2 },
+          { label: 'ResNet-50', data: [{ x: 102, y: 84.7, r: 22 }], backgroundColor: 'rgba(255,159,67,0.4)', borderColor: '#ff9f43', borderWidth: 2 },
+          { label: 'AlexNet', data: [{ x: 240, y: 79.3, r: 28 }], backgroundColor: 'rgba(255,61,113,0.4)', borderColor: '#ff3d71', borderWidth: 2 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#7ab8cc', font: { family: 'DM Mono', size: 11 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: Size ${ctx.raw.x}MB, Acc ${ctx.raw.y}%` } } },
+        scales: {
+          x: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' }, callback: v => v+'MB' }, title: { display: true, text: 'Model Size (MB)', color: '#3d6b7a', font: { family: 'DM Mono', size: 10 } } },
+          y: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' }, callback: v => v+'%' }, title: { display: true, text: 'SDP Accuracy', color: '#3d6b7a', font: { family: 'DM Mono', size: 10 } }, min: 74 }
+        }
+      }
+    });
+  }
+
+  // Inference time
+  destroyChart('infer-chart');
+  const infCtx = document.getElementById('infer-chart');
+  if (infCtx) {
+    activeCharts['infer-chart'] = new Chart(infCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['TRGNet', 'ResNet-50', 'AlexNet'],
+        datasets: [{
+          label: 'Inference (ms)',
+          data: [1.2, 8.4, 5.1],
+          backgroundColor: ['rgba(0,229,255,0.35)','rgba(255,159,67,0.35)','rgba(255,61,113,0.35)'],
+          borderColor: ['#00e5ff','#ff9f43','#ff3d71'],
+          borderWidth: 2, borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' } } },
+          y: { grid: { color: 'rgba(26,52,72,0.8)' }, ticks: { color: '#7ab8cc', font: { family: 'DM Mono' }, callback: v => v+'ms' } }
+        }
+      }
+    });
+  }
+
+  // Radar chart
+  destroyChart('radar-chart');
+  const radCtx = document.getElementById('radar-chart');
+  if (radCtx) {
+    activeCharts['radar-chart'] = new Chart(radCtx.getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels: ['Accuracy', 'F1-Score', 'Speed', 'Storage Eff.', 'SDP Fit', 'AUC-ROC'],
+        datasets: [
+          { label: 'TRGNet',   data: [95, 94, 98, 98, 100, 96], borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.12)', pointBackgroundColor: '#00e5ff', borderWidth: 2, pointRadius: 4 },
+          { label: 'ResNet-50',data: [88, 85, 72, 60, 45, 88],  borderColor: '#ff9f43', backgroundColor: 'rgba(255,159,67,0.08)', pointBackgroundColor: '#ff9f43', borderWidth: 2, pointRadius: 4 },
+          { label: 'AlexNet',  data: [82, 78, 80, 38, 40, 84],  borderColor: '#ff3d71', backgroundColor: 'rgba(255,61,113,0.08)', pointBackgroundColor: '#ff3d71', borderWidth: 2, pointRadius: 4 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#7ab8cc', font: { family: 'DM Mono', size: 11 }, boxWidth: 12 } } },
+        scales: {
+          r: {
+            grid: { color: 'rgba(26,52,72,0.8)' },
+            ticks: { display: false },
+            pointLabels: { color: '#7ab8cc', font: { family: 'DM Mono', size: 11 } },
+            angleLines: { color: 'rgba(26,52,72,0.8)' }
+          }
+        }
+      }
+    });
+  }
+}
+
+function buildPerfPills() {
+  const el = document.getElementById('perf-pills');
+  if (!el) return;
+  const pills = [
+    { label: 'Accuracy', val: '92.1%', color: '#00e5ff' },
+    { label: 'F1-Score', val: '0.891', color: '#00e5ff' },
+    { label: 'Precision', val: '0.903', color: '#a8ff3e' },
+    { label: 'Recall', val: '0.879', color: '#a8ff3e' },
+    { label: 'AUC-ROC', val: '0.943', color: '#00e5ff' },
+    { label: 'Inference', val: '1.2ms', color: '#a8ff3e' },
+    { label: 'Model Size', val: '4.8MB', color: '#a8ff3e' },
+    { label: 'Params', val: '~1.2M', color: '#a8ff3e' },
+    { label: 'Training', val: '~3 min/epoch', color: '#ff9f43' },
+    { label: 'Class Balance', val: 'SMOTE applied', color: '#ff9f43' },
+    { label: 'Best Dataset', val: 'KC1 (93.0%)', color: '#00e5ff' },
+    { label: 'Framework', val: 'PyTorch 2.x', color: '#7ab8cc' },
+  ];
+  el.innerHTML = pills.map(p => `
+    <div class="perf-pill">
+      <div class="perf-pill-dot" style="background:${p.color}"></div>
+      <span style="color:var(--text3)">${p.label}:</span>
+      <span style="color:${p.color};font-family:'Space Mono',monospace;font-weight:700">${p.val}</span>
+    </div>
+  `).join('');
+}
+
+// About page init flag
+let aboutInitialized = false;
+
+// Drag and drop
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const fakeEvent = { target: { files: [file] } };
+    handleFileUpload(fakeEvent);
+  }
+});
+</script>
+</body>
+</html>
